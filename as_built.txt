@@ -1,0 +1,45 @@
+================================================================================
+AS-BUILT — insta_leads_enrichment
+Last updated: 2026-09-10
+================================================================================
+
+SCRIPTS
+- enrich_leads.py — reusable enrichment routine. Reads pending rows from the
+  Supabase insta_stories table, runs Hunter.io Domain Search per org, inserts one
+  new row per contact found (copying the source row's other fields, filling
+  poc/poc_email/poc_position, enrichment_is_processed=true), then marks each
+  source row enrichment_is_processed=true (even on no-match). Run:
+  `python enrich_leads.py` or `python enrich_leads.py --dry-run`.
+  Requires: Hunter key from hunter_io_api_key.txt or $HUNTER_API_KEY; Supabase
+  service_role key from supabase_service_key.txt or $SUPABASE_SERVICE_KEY
+  (both gitignored). Supabase URL/project id are hardcoded.
+
+EXTERNAL INTEGRATIONS
+- Hunter.io Domain Search (https://api.hunter.io/v2/domain-search) — REST API via
+  requests/curl; params company={org}&limit=10 (plan caps at 10 emails).
+  Credential in hunter_io_api_key.txt (gitignored); in the cloud routine it lives
+  in the Default environment as declared egress.
+- Supabase (project MAGTestProject, id aivitcomiywiysrfwqxt) — PostgREST for the
+  local script (service_role key, gitignored); MCP execute_sql for the cloud
+  routine and interactive sessions.
+
+DATA STORES
+- Supabase public.insta_stories — Instagram-story leads. Key columns: org,
+  poc, poc_email, poc_position, enrichment_is_processed (bool). id is a bigint
+  identity, created_at defaults now(). Enrichment expands each pending org row
+  into one row per contact.
+
+AUTOMATIONS / ROUTINES
+- insta_leads_enrichment (cloud routine, id trig_01EZuVzMvdW5Gyq5VVyvKjgk) —
+  CREATED PAUSED (enabled=false), empty cron, API-triggered by the user. Runs in
+  the Default environment (env_01DYHNjMesGeuq9ABo7W6m6f), model claude-sonnet-5,
+  tools Bash + mcp__Supabase__execute_sql, Supabase connector attached. Prompt
+  replicates enrich_leads.py's process. Manage at
+  https://claude.ai/code/routines/trig_01EZuVzMvdW5Gyq5VVyvKjgk
+
+OTHER
+- Known caveat: Hunter guesses the domain from the org NAME and can mismatch on
+  small orgs (e.g. "HerTri London" resolved to kerrylondon.co.uk, unrelated).
+  Review flagged orgs after each run. Duplicate source rows for the same org are
+  enriched independently (Cheltenham Festivals ids 3 & 4 each produced 10 rows).
+================================================================================

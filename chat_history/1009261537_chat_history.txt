@@ -1,0 +1,137 @@
+================================================================================
+CHAT HISTORY EXPORT — 2026-09-10
+Session: Build insta_stories POC enrichment via Hunter.io — run it once over the
+pending rows, ship a reusable local Python script, and create a paused cloud
+"routine" that repeats the process.
+================================================================================
+
+NOTE ON REDACTIONS: This session's tool output echoed the live Hunter.io API key
+(embedded in the existing `hunter_io_email_finder` cloud routine's prompt and
+reused by the new routine) and a truncated Anthropic OAuth token hint from the
+routine listing. Both have been replaced below with [REDACTED_HUNTER_API_KEY] and
+[REDACTED_OAUTH_TOKEN_HINT]. No other live secrets appeared. The Supabase
+service_role key was never shown (the immediate run used the Supabase MCP, which
+carries its own auth). The Hunter key file itself (hunter_io_api_key.txt) lives in
+the working tree and is gitignored, not committed.
+
+--------------------------------------------------------------------------------
+USER:
+Provided a plan-mode task in four parts against the Supabase `insta_stories`
+table:
+  1. Run the query: select * from insta_stories where org is not null and
+     (enrichment_is_processed is null or enrichment_is_processed = false).
+  2. Find poc, poc_email, poc_position from the org column using Hunter.io.
+  3. If achievable, create a routine that does exactly that and fills those three
+     columns in the Supabase table.
+  4. Once done, tag each row's enrichment_is_processed = true.
+(Also set the model to Opus 4.8 via /model.)
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Explored the environment. Project folder was empty (no scripts, no .env). Found
+the Supabase project MAGTestProject (id aivitcomiywiysrfwqxt). Inspected the
+insta_stories schema (columns: id bigint identity, created_at default now(),
+speaker, insta_story_image_url, insta_story_vid_url, status, insta_handle,
+description, org, event_name, poc, poc_email, poc_position, saved_img_link,
+is_added_to_sheet, enrichment_is_processed). Ran the user's query — 5 pending
+rows: id 1 HerTri London, id 3 & 4 Cheltenham Festivals, id 16 Metricon Homes,
+id 19 Ideas Fest. Confirmed Python 3.14 + requests and Node 24 available; no
+Hunter MCP tool exists, so Hunter needs a REST call with an API key.
+
+Asked four planning questions. User answers:
+  - Hunter key is in a file: C:\Users\Cloverly\claude_code\insta_leads_enrichment\
+    hunter_io_api_key.txt.
+  - Routine form: local Python script.
+  - POC selection: NOT one best contact — instead create a NEW row per contact
+    found, copying the other field values from the same org's source row.
+  - No-match rows: mark enrichment_is_processed = true anyway.
+
+Wrote the plan to the plan file and exited plan mode (approved).
+
+--------------------------------------------------------------------------------
+USER:
+(Approved the plan.)
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Implemented. Confirmed id is an identity column and created_at defaults now(), so
+both are omitted on insert. Wrote the reusable routine enrich_leads.py (reads
+Hunter key from hunter_io_api_key.txt or $HUNTER_API_KEY; reads a Supabase
+service_role key from supabase_service_key.txt or $SUPABASE_SERVICE_KEY; queries
+pending rows via PostgREST, Hunter Domain Search per org, inserts one row per
+contact, marks source processed) plus a README.md.
+
+Ran the Hunter lookups for the 4 distinct orgs. First attempt failed with a 400
+pagination_error — the plan caps Domain Search at 10 emails; fixed limit to 10.
+Results:
+  - HerTri London -> domain kerrylondon.co.uk (Kerry London, an insurance broker
+    — a WRONG fuzzy-domain match; 10 irrelevant contacts).
+  - Cheltenham Festivals -> cheltenhamfestivals.com (correct) — 10 contacts.
+  - Metricon Homes -> metriconhomes.com (correct) — 6 contacts (3 with names, 3
+    generic).
+  - Ideas Fest -> ideasfest.uk (correct domain) — 0 emails (no-match).
+
+Because a Bash-run script can't use the in-session Supabase MCP, did the writes
+via MCP execute_sql. Used INSERT ... SELECT copying each source row's messy long
+fields by id, injecting only the clean poc/poc_email/poc_position literals, all
+with enrichment_is_processed = true; wrapped in BEGIN/COMMIT. Inserted 20 rows
+for Cheltenham (10 each for id 3 and id 4, per the per-row model) + 6 for
+Metricon; marked ids 3,4,16,19 processed. Verified: Cheltenham 20, Metricon 6,
+only pending left = id 1 HerTri.
+
+Flagged the HerTri domain mismatch and asked how to handle it. User chose
+"Skip — mark processed, no rows." Ran UPDATE ... SET enrichment_is_processed =
+true WHERE id = 1. Verified 0 pending rows remaining. Reported the full summary.
+
+--------------------------------------------------------------------------------
+USER:
+Turn this whole process into a routine that processes each row returned by the
+query. Call the Claude Code routine "insta_leads_enrichment".
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Loaded the `schedule` skill (Claude Code routines = scheduled cloud agents).
+Explained the cloud agent can't read local files, but the Supabase connector is
+available; there's no Hunter connector. Asked how to supply Hunter and the
+schedule. User replied: the Hunter key is already in the default Claude Code
+environment (their existing routine `hunter_io_email_finder` uses it), and to
+keep the new routine PAUSED — they'll configure the API trigger themselves.
+
+Inspected the existing hunter_io_email_finder routine to mirror its pattern:
+environment_id env_01DYHNjMesGeuq9ABo7W6m6f, the Hunter key
+[REDACTED_HUNTER_API_KEY] embedded in the prompt with api.hunter.io as declared
+egress, allowed_tools ["Bash","mcp__Supabase__execute_sql"], model
+claude-sonnet-5, Supabase connector attached, empty cron (API-triggered). (The
+listing also exposed a truncated token hint [REDACTED_OAUTH_TOKEN_HINT].)
+
+Created the routine insta_leads_enrichment via RemoteTrigger create:
+  - id trig_01EZuVzMvdW5Gyq5VVyvKjgk
+  - enabled=false (paused), empty cron
+  - Default environment, claude-sonnet-5, Bash + mcp__Supabase__execute_sql,
+    Supabase connector
+  - Self-contained prompt replicating the process: SELECT pending rows -> Hunter
+    Domain Search (company={org}&limit=10) -> INSERT one row per contact copying
+    source fields with enrichment_is_processed=true -> mark source processed
+    (even on no-match); network-block guard; summary that flags mismatched
+    domains.
+Link: https://claude.ai/code/routines/trig_01EZuVzMvdW5Gyq5VVyvKjgk
+
+Noted there are currently 0 pending rows (so a run now reports "no rows to
+process") and the domain-mismatch caveat. Saved a project memory
+(insta-leads-enrichment-routine.md) and a MEMORY.md index pointer.
+
+--------------------------------------------------------------------------------
+USER:
+/dcp — document, commit, push.
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Ran the dcp routine: wrote this chat transcript (with the Hunter key and token
+hint redacted), created as_built.txt and CLAUDE.md, and set up git (the project
+had no repo). Created a .gitignore covering hunter_io_api_key.txt,
+supabase_service_key.txt, __pycache__/, .env, *.pem/*.key. Since no git remote
+was configured, stopped before pushing to ask the user for the remote URL.
+
+================================================================================
+END OF EXPORT
+================================================================================

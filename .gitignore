@@ -1,0 +1,19 @@
+# Secrets / credentials — never commit
+hunter_io_api_key.txt
+supabase_service_key.txt
+.env
+*.env
+*.pem
+*.key
+*service-account*.json
+*credentials*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
