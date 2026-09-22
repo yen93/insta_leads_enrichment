@@ -6,8 +6,12 @@ For every pending row in public.insta_stories (org is not null and
 enrichment_is_processed is null/false), look the org up on Hunter.io
 (Domain Search) and insert ONE new row per contact found, copying the
 source row's other fields and filling poc / poc_email / poc_position.
-Each source row is then tagged enrichment_is_processed = true (even when
-no contact is found), so it is never reprocessed.
+Contacts whose Hunter position matches one of the TARGET_ROLES are
+preferred (keyword match). If an org has NO target-role contact, one
+fallback contact (any person at the company) is kept so every resolvable
+org still yields at least one POC. Each source row is then tagged
+enrichment_is_processed = true (even when no contact is found at all), so
+it is never reprocessed.
 
 Credentials
 -----------
@@ -24,6 +28,7 @@ Usage
 """
 
 import os
+import re
 import sys
 import time
 import json
@@ -39,6 +44,10 @@ HUNTER_ENDPOINT = "https://api.hunter.io/v2/domain-search"
 HERE = Path(__file__).resolve().parent
 
 # Fields copied verbatim from a source row onto each new contact row.
+# NOTE: is_added_to_sheet is deliberately NOT copied — a new contact row must
+# start with it empty so the Sheet-sync step (sheet_sync.py) picks it up. If the
+# source story was already in the Sheet, copying its true would wrongly skip the
+# new contacts from ever being synced.
 COPY_FIELDS = [
     "speaker",
     "insta_story_image_url",
@@ -49,8 +58,47 @@ COPY_FIELDS = [
     "org",
     "event_name",
     "saved_img_link",
-    "is_added_to_sheet",
 ]
+
+# Only contacts whose Hunter position matches one of these target roles are kept.
+# Matching is case-insensitive and keyword-based, tolerant of title variants like
+# "Head of ...", "... Director", "Senior ...", "... Coordinator". Contacts Hunter
+# returns with an empty/unknown position are dropped.
+TARGET_ROLES = (
+    "Conference / Events Manager",
+    "Marketing Manager",
+    "Communication Manager",
+    "Learning & Development Manager",
+    "People & Culture Manager",
+    "Executive Assistant",
+    "Human Resources / HR (incl. recruitment, talent acquisition, people operations)",
+)
+
+_ROLE_RE = re.compile(
+    r"event|conference"                                        # Conference / Events
+    r"|marketing"                                              # Marketing
+    r"|communication|\bcomms\b"                                # Communication(s) / comms
+    r"|\bl\s*&\s*d\b"                                           # L&D shorthand
+    r"|executive\s+assistant|\bexec\.?\s*assistant\b|\bea\b"    # Executive Assistant / EA
+    r"|\bhr\b|human\s+resources|\bchro\b|chief\s+people"        # HR / Human Resources
+    r"|recruit|talent|people\s+oper|people\s+ops",             # recruitment / talent / people ops
+    re.IGNORECASE,
+)
+
+
+def position_matches_target(position) -> bool:
+    """True if a Hunter free-text position falls into one of TARGET_ROLES."""
+    if not position or not position.strip():
+        return False
+    pos = position.lower()
+    if _ROLE_RE.search(pos):
+        return True
+    # Two-word roles: require both tokens present, in any order/punctuation.
+    if "learning" in pos and "development" in pos:
+        return True
+    if "people" in pos and "culture" in pos:
+        return True
+    return False
 
 
 def _read_secret(env_var: str, filename: str) -> str:
@@ -112,8 +160,15 @@ def hunter_domain_search(org: str, hunter_key: str) -> dict:
 
 
 def contacts_from_hunter(data: dict) -> list:
-    """Turn Hunter emails into de-duplicated contact dicts (poc/email/position)."""
-    contacts = []
+    """Contacts to insert for one org, as de-duplicated dicts (poc/email/position).
+
+    Prefer contacts whose position matches one of the TARGET_ROLES and return all
+    of them. If NONE of the returned emails match a target role, fall back to a
+    SINGLE "any" contact so every org that resolves to a domain still yields at
+    least one POC — preferring a named person over a generic/nameless mailbox.
+    Only when Hunter returns no emails at all is the list empty.
+    """
+    all_contacts = []
     seen = set()
     for e in data.get("emails", []) or []:
         email = (e.get("value") or "").strip()
@@ -121,14 +176,29 @@ def contacts_from_hunter(data: dict) -> list:
             continue
         seen.add(email.lower())
         name = " ".join(p for p in [e.get("first_name"), e.get("last_name")] if p).strip()
-        contacts.append(
+        position = (e.get("position") or "").strip()
+        all_contacts.append(
             {
                 "poc": name or None,
                 "poc_email": email,
-                "poc_position": (e.get("position") or None),
+                "poc_position": position or None,
+                "_matched": position_matches_target(position),
             }
         )
-    return contacts
+
+    matched = [c for c in all_contacts if c["_matched"]]
+    if matched:
+        chosen = matched
+    elif all_contacts:
+        # No target-role contact for this org -> keep ONE fallback so it still
+        # gets a POC. Prefer an entry with a real person's name.
+        chosen = [next((c for c in all_contacts if c["poc"]), all_contacts[0])]
+    else:
+        chosen = []
+
+    for c in chosen:
+        c.pop("_matched", None)
+    return chosen
 
 
 def build_new_row(source: dict, contact: dict) -> dict:

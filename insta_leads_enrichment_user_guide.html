@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insta Leads Enrichment — User Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Lato', Arial, sans-serif;
+    color: #212121;
+  }
+  .col {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-family: 'Lato', Arial, sans-serif;
+    font-weight: 300;
+    font-size: 44px;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    margin: 0;
+    text-align: center;
+  }
+  h2 {
+    font-family: 'Lato', Arial, sans-serif;
+    font-weight: 400;
+    font-size: 26px;
+    color: #37474F;
+    margin: 0;
+  }
+  h3 {
+    font-family: 'Lato', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 19px;
+    color: #212121;
+    margin: 0 0 10px 0;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 16px 0;
+  }
+  ul, ol {
+    font-size: 16px;
+    color: #212121;
+    line-height: 1.6;
+    padding-left: 24px;
+    margin: 0 0 16px 0;
+  }
+  li { margin-bottom: 8px; }
+  a { color: #37474F; }
+  .header-band {
+    background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(https://ssl.gstatic.com/atari/images/simple-header-blended-small.png) center/cover, #37474F;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .intro-band {
+    background: #323232;
+    padding: 40px 20px;
+  }
+  .intro-band p {
+    color: #ffffff;
+    font-size: 17px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .header-strip {
+    background: #F2F2F2;
+    padding: 32px 20px;
+  }
+  .content-band {
+    background: #ffffff;
+    padding: 36px 20px;
+  }
+  .img-wrap {
+    margin: 24px 0;
+    text-align: center;
+  }
+  .img-wrap img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  .img-caption {
+    font-size: 13px;
+    color: #757575;
+    font-style: italic;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<section class="header-band">
+  <h1>Insta Leads Enrichment — User Guide</h1>
+</section>
+
+<section class="intro-band">
+  <div class="col">
+    <p>Insta Leads Enrichment automatically finds the right people to contact at each organisation captured from our Instagram-story leads. It looks each company up on Hunter.io and fills in contact names, job titles, and email addresses in our leads database — so the sales team starts with real points of contact instead of just a company name.</p>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>What This Is</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <p>Every time we capture a lead from an Instagram story, we record the <b>organisation</b> behind it — but not who to actually email. This tool closes that gap. For each organisation that still needs contacts, it searches Hunter.io for people at that company and writes them back into the leads table, one entry per person found (their name, position, and work email).</p>
+    <p>It runs as an automated Claude Code routine called <b>insta_leads_enrichment</b>. There is also a script version that does exactly the same thing if you prefer to run it from a computer.</p>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>Who This Guide Is For</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <ul>
+      <li><b>Sales and lead-generation team</b> — anyone who works from the enriched leads and wants to understand where the contact names and emails come from.</li>
+      <li><b>The routine owner / operator</b> — whoever triggers or schedules the routine and reviews its results.</li>
+    </ul>
+    <p>You do <i>not</i> need to be technical to use it. If you can open a web page and click a button, you can run it.</p>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>How to Use It</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <p>The routine now runs <b>automatically once a day at 8:30 AM Philippine time</b> — the daily run needs no action from you. You can also start it yourself whenever you need it sooner:</p>
+    <ol>
+      <li><b>Let the daily schedule run it (nothing to do).</b> Every day at 8:30 AM Philippine time the routine starts on its own and works through any leads that still need contacts.</li>
+      <li><b>Run it on demand.</b> To enrich leads without waiting for the next daily run, open the routine at <a href="https://claude.ai/code/routines/trig_01EZuVzMvdW5Gyq5VVyvKjgk">claude.ai/code/routines/trig_01EZuVzMvdW5Gyq5VVyvKjgk</a> and run it once. It can also be started from another system via an API trigger.</li>
+    </ol>
+    <div class="img-wrap">
+      <img src="https://placehold.co/900x400/eeeeee/37474f?text=Routine%20Trigger%20Page" alt="Routine trigger page placeholder">
+      <div class="img-caption">Placeholder image — replace with an actual screenshot.</div>
+    </div>
+    <p>Whichever way you start it, you don't need to prepare anything — it always looks up the current list of leads that still need contacts and works through them.</p>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>What to Expect</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <ul>
+      <li><b>It runs automatically every day.</b> The routine fires once a day at 8:30 AM Philippine time, so you don't need to trigger it for the daily run.</li>
+      <li><b>It only touches leads that still need contacts.</b> Each run looks for leads that have an organisation but haven't been enriched yet, and skips everything already done — so it's safe to run again and again without creating duplicates of already-processed leads.</li>
+      <li><b>One entry per selected contact.</b> If Hunter returns several people for a company, the tool adds a separate lead row for each person <b>whose job title is one of the preferred roles</b> (see below), carrying over the original story's details and filling in that person's name, position, and email.</li>
+      <li><b>It prefers the roles we care about — but always finds someone.</b> Contacts are preferred when their Hunter job title matches one of these roles: Conference / Events Manager, Marketing Manager, Communication Manager, Learning &amp; Development Manager, People &amp; Culture Manager, Executive Assistant, or Human Resources / HR (including recruitment, talent acquisition, and people operations). Matching is flexible, so close variants (for example "Head of Marketing", "Events Coordinator", or "HR Business Partner") count too. <b>If a company has nobody in those roles, the tool keeps one other contact person from that company instead</b> (preferring a named person over a generic inbox like info@), so every company we can find online ends up with at least one point of contact.</li>
+      <li><b>Every lead gets marked as processed.</b> Once a lead has been looked up it is flagged as done — even if no contacts were found — so it won't be looked up again.</li>
+      <li><b>Turnaround.</b> A run in the cloud typically finishes in a couple of minutes, depending on how many organisations need looking up.</li>
+      <li><b>A short summary at the end.</b> Each run reports how many leads it processed and, for each organisation, which company domain it matched and how many contacts it added.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>Known Limitations</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <p>Being upfront about what it does <i>not</i> do saves a lot of "why didn't it…" questions:</p>
+    <ul>
+      <li><b>Up to 10 contacts per organisation.</b> Our Hunter.io plan returns at most 10 people per company, so very large organisations will only show the first 10.</li>
+      <li><b>Company matching can occasionally be wrong.</b> Hunter guesses a company's website from its name. For small or ambiguously named organisations it can match the wrong company (for example, "HerTri London" once matched an unrelated insurance broker). The run's summary flags any organisation whose matched domain looks off — it's worth a quick review after each run.</li>
+      <li><b>Emails are not verified or contacted.</b> The tool records the contacts Hunter provides; it does not send any emails, and it doesn't independently verify that every address is deliverable.</li>
+      <li><b>The same organisation can appear more than once.</b> If two separate Instagram stories mention the same company, each is enriched on its own, so you may see the same set of contacts added twice.</li>
+      <li><b>No notifications.</b> It doesn't email or message you when it finishes — you read the outcome in the run summary.</li>
+      <li><b>It does not add leads to the Google Sheet.</b> Enrichment only fills contacts in the database. Getting those rows into the working spreadsheet is handled by a separate process.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>How It Was Built (Architecture &amp; Tech Stack)</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <p>End to end, a single run works like this:</p>
+    <ul>
+      <li><b>Find the work.</b> It queries our leads database for rows that have an organisation but haven't been enriched yet.</li>
+      <li><b>Look up each organisation.</b> For every one, it calls Hunter.io's Domain Search to find people at that company — their name, job title, and email.</li>
+      <li><b>Write the selected contacts back.</b> For each person found <b>in one of the preferred roles</b>, it adds a new lead row that carries over the original story's details and fills in that contact. If no one at the company is in those roles, it adds one other contact from that company instead, so the company still gets a lead.</li>
+      <li><b>Mark it done.</b> It flags the original lead as processed so it won't be picked up again, then reports a summary.</li>
+    </ul>
+    <div class="img-wrap">
+      <img src="https://placehold.co/900x400/eeeeee/37474f?text=Insta%20Leads%20Enrichment%20Flow" alt="Architecture diagram placeholder">
+      <div class="img-caption">Placeholder image — replace with an actual screenshot.</div>
+    </div>
+    <p>Under the hood it uses:</p>
+    <ul>
+      <li><b>Claude Code cloud routine</b> — the automated agent (<code>insta_leads_enrichment</code>) that carries out the steps, running on the Claude <code>claude-sonnet-5</code> model.</li>
+      <li><b>Supabase</b> (the <code>insta_stories</code> table) — the leads database that is read from and written to.</li>
+      <li><b>Hunter.io Domain Search API</b> — the source of contact names, positions, and emails.</li>
+      <li><b>A Python script alternative</b> (<code>enrich_leads.py</code>) — runs the identical process from a computer for anyone who prefers that.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>Troubleshooting</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <ul>
+      <li><b>The run said "no rows to process."</b> That's normal — it means every current lead with an organisation has already been enriched. New leads will be picked up on the next run.</li>
+      <li><b>A lead's contacts look like the wrong company.</b> Hunter matched the wrong website for that organisation's name. Check the domain noted in the run summary; those contacts can be ignored or removed.</li>
+      <li><b>An organisation only shows a few contacts.</b> Hunter only returned that many, and results are capped at 10 per company — this is expected, not an error.</li>
+      <li><b>The same contacts appear twice for one company.</b> That company came from more than one Instagram story, and each is enriched separately.</li>
+      <li><b>Nothing seems to be happening.</b> The routine runs once a day at 8:30 AM Philippine time, so new leads are picked up at the next daily run. If you need them sooner, open the routines page and run it on demand.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="header-strip">
+  <div class="col"><h2>Support / Questions</h2></div>
+</section>
+<section class="content-band">
+  <div class="col">
+    <p>For questions about this routine — how it works, running it, reviewing results, or changing its schedule — contact <b>Julienne</b> at <a href="mailto:julienne@myadventuregroup.com.au">julienne@myadventuregroup.com.au</a>, who owns and manages the automation. You can also open the routine directly at <a href="https://claude.ai/code/routines/trig_01EZuVzMvdW5Gyq5VVyvKjgk">claude.ai/code/routines/trig_01EZuVzMvdW5Gyq5VVyvKjgk</a>.</p>
+  </div>
+</section>
+
+<section id="h.68f0b8918457bce8_82" style="background:#ffffff;padding:8px 20px;"><div style="max-width:760px;margin:0 auto;"><hr style="border:none;border-top:1px solid #d9d9d9;margin:0;"></div></section>
+<section id="h.5a0263770fa94d5d_3" style="background:#ffffff;padding:24px 20px;"><div style="max-width:760px;margin:0 auto;"><a href="#" style="display:inline-block;font-family:'Lato',sans-serif;font-size:15px;font-weight:400;color:#ffffff;background:#37474F;padding:12px 28px;border-radius:4px;text-decoration:none;letter-spacing:0.3px;">Button label</a></div></section>
+
+<section class="content-band">
+  <div class="col">
+    <p style="margin:0 0 6px 0;">Updated by: Julienne</p>
+    <p style="margin:0;">Last Update: 10 September 2026</p>
+  </div>
+</section>
+
+</body>
+</html>

@@ -7,10 +7,35 @@ on Hunter.io and populate points of contact.
 
 For every pending row (`org IS NOT NULL AND (enrichment_is_processed IS NULL OR =
 false)`), call Hunter.io **Domain Search** on the org name and **expand the row
-into one new row per contact** — copying the source row's other fields and filling
-`poc` / `poc_email` / `poc_position`. Then mark the source row
-`enrichment_is_processed = true` (even when no contact is found). This is an
-expansion model, not a single-best-POC pick.
+into one new row per selected contact** — copying the source row's other fields
+and filling `poc` / `poc_email` / `poc_position`. Contacts whose Hunter job title
+matches one of the **target roles** are preferred (see below); if an org has none,
+one fallback "any" contact is kept so it still gets a POC. Then mark the source
+row `enrichment_is_processed = true` (even when no contact is found at all). This
+is an expansion model, not a single-best-POC pick.
+
+## Target-role filter
+
+Contacts whose Hunter `position` matches one of these roles are **preferred**:
+Conference / Events Manager, Marketing Manager, Communication Manager,
+Learning & Development Manager, People & Culture Manager, Executive Assistant,
+and Human Resources / HR.
+Matching is **keyword-based** and case-insensitive (e.g. any "marketing" title,
+"events"/"conference", "communication(s)"/"comms", "learning & development"/"L&D",
+"people & culture", "executive assistant"/"EA", and HR: standalone "HR",
+"human resources", "CHRO"/"chief people", "recruit", "talent",
+"people operations"/"people ops"), so title variants like
+"Head of Marketing" or "Events Coordinator" are kept.
+
+**Fallback:** if an org has NO target-role contact among Hunter's results, keep
+exactly **one** fallback contact (any person at the company — prefer a named
+person over a generic mailbox like info@) so every resolvable org gets at least
+one POC. Only when Hunter returns zero emails is the org a true no-match. The
+source row is marked processed regardless. The preference + fallback logic lives
+in `TARGET_ROLES` / `position_matches_target()` / `contacts_from_hunter()` in
+`enrich_leads.py` — keep the cloud routine's prompt in sync when it changes. Note
+the plan's 10-email cap is applied **before** this selection, so an org may fall
+back even when a target-role person exists beyond the first 10.
 
 ## Key facts / gotchas
 
