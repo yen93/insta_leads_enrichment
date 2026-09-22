@@ -1,0 +1,175 @@
+================================================================================
+CHAT HISTORY EXPORT — 2026-09-22
+Session: Add a job-title (role) filter to the insta_stories Hunter.io enrichment,
+extend it with HR roles, add a "one fallback contact per org" rule, keep the
+local script + cloud routine + docs in sync, then build a local iMAG guide page.
+================================================================================
+
+NOTE ON REDACTIONS: This session's tool output (RemoteTrigger get/update on the
+cloud routine) echoed the live Hunter.io API key embedded in the routine's
+prompt. It has been replaced below with [REDACTED_HUNTER_API_KEY]. No other live
+secrets appeared (the routine's api_token_hint was empty this session; Supabase
+writes go through the routine's own connector auth). The Hunter key file
+(hunter_io_api_key.txt) remains gitignored and uncommitted.
+
+CONTEXT AT START: Working tree already had the committed enrichment work from the
+2026-09-10 session (enrich_leads.py, README.md, CLAUDE.md) plus an untracked
+insta_leads_enrichment_user_guide.html. The cloud routine
+insta_leads_enrichment (id trig_01EZuVzMvdW5Gyq5VVyvKjgk) was found ENABLED on
+cron `45 22 * * 0-4` (22:45 UTC Sun–Thu) and had last run successfully on
+2026-09-21 — i.e. no longer paused as the original CLAUDE.md text said. Model:
+Opus 4.8.
+
+--------------------------------------------------------------------------------
+USER:
+Modify the Hunter.io enrichment so it only targets people in these roles:
+Conference / Events Manager, Marketing Manager, Communication Manager,
+Learning & Development Manager, People & Culture Manager, and Executive
+Assistant. (Given in plan mode.)
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Read enrich_leads.py and located the filtering point: contacts_from_hunter()
+(kept every returned email). Read README.md and searched the repo; the cloud
+routine's prompt is not stored locally. Noted Hunter's `position` field is messy
+free text, so matching the six roles needs a strictness decision.
+
+Asked two planning questions:
+  1. Match strictness — chosen: KEYWORD / FUNCTION match (tolerant of variants
+     like "Head of Marketing", "Events Coordinator"), not strict title match.
+  2. Scope — chosen: update SCRIPT + ROUTINE + DOCS together (keep in sync).
+
+Wrote the plan (prefer keyword matching, drop contacts with no/unknown position,
+still mark source rows processed on no-match) and exited plan mode (approved).
+
+Implemented:
+  - enrich_leads.py: added `import re`, a TARGET_ROLES tuple, a compiled
+    _ROLE_RE, and position_matches_target() (regex for event/conference,
+    marketing, communication/comms, L&D shorthand, executive assistant/EA; plus
+    order-agnostic both-word checks for learning+development and people+culture).
+    contacts_from_hunter() now skips any email whose position doesn't match
+    (including blank positions). Verified with a sample-title test (all
+    expected keep/drop cases passed) and an end-to-end contacts_from_hunter test.
+  - Cloud routine: loaded the `schedule` skill, fetched the routine with
+    RemoteTrigger get, and updated only its prompt (added a TARGET ROLES block +
+    a STEP 2 filter step, drop no-position contacts, still mark processed),
+    preserving cron, enabled state, Supabase connector, model, and tools. The
+    Hunter key in the prompt is [REDACTED_HUNTER_API_KEY].
+  - Docs: README.md ("Target roles" section + a caveat that the 10-email cap is
+    applied before filtering), CLAUDE.md ("Target-role filter" section), and
+    insta_leads_enrichment_user_guide.html (plain-language role-filter wording).
+  - Memory: updated insta-leads-enrichment-routine.md with the filter and the
+    routine's real current schedule/enabled state.
+Flagged that the routine was already enabled (not paused) and that the 10-result
+cap now bites harder (0–2 matches per org is expected). Nothing committed.
+
+--------------------------------------------------------------------------------
+USER:
+Update the routine so it also includes HR-related roles.
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Added a Human Resources / HR bucket, keeping script + routine + docs in sync.
+  - enrich_leads.py: extended _ROLE_RE with \bhr\b, human resources, \bchro\b,
+    chief people, recruit, talent, people oper|people ops; added a 7th
+    TARGET_ROLES entry. (Started with `talent acquisition` then broadened to
+    bare `talent` to catch talent management/partner titles.) Verified: HR
+    Manager, Head of HR, HR Business Partner, Human Resources Director,
+    Recruitment/Talent/People Ops, CHRO, Chief People all match; Software
+    Engineer, "Christopher", "Bahrain", Sales Director, blanks/None correctly do
+    not.
+  - Cloud routine: RemoteTrigger update adding the HR bullet to the TARGET ROLES
+    block; everything else preserved.
+  - Docs + memory: README, CLAUDE.md, user-guide HTML, and the memory file all
+    updated to list HR.
+Flagged that `talent` is matched broadly (could catch a non-HR "Talent Booker")
+and offered to narrow it to talent acquisition/management if wanted.
+
+--------------------------------------------------------------------------------
+USER:
+Update the routine so that if no POC is found under the specified roles, it just
+finds any contact person in that company — we need at least one per org — but
+only apply that "any POC" condition when no one under the preferred roles is
+found.
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Implemented prefer-then-fallback across script + routine + docs:
+  - enrich_leads.py: rewrote contacts_from_hunter() to build the full de-duped
+    contact list with a per-contact `_matched` flag, then: if any matched ->
+    return ALL matches; elif any contacts -> return exactly ONE fallback
+    (next contact WITH a name, else the first email); else -> empty. Strips the
+    internal `_matched` key before returning. Updated the module docstring.
+    Verified four cases: all-matches; named fallback (John Doe chosen over
+    info@); nameless fallback (info@); and empty input -> [].
+  - Cloud routine: RemoteTrigger update — STEP 2 rewritten to select all
+    target-role matches, else exactly ONE fallback (prefer a named person over a
+    generic mailbox like info@/contact@, else first email); zero emails / no
+    domain = true no-match. STEP 4 now flags which orgs used a fallback.
+    Schedule/enabled/connector/tools preserved.
+  - Docs + memory: README, CLAUDE.md, user-guide HTML, and memory reworded from
+    "hard filter / dropped" to "preference + one fallback per org"; updated the
+    10-email-cap caveat to say an org can fall back even if a target-role person
+    exists beyond the first 10.
+Noted the fallback inserts ONE contact (per the "at least one" ask), not all;
+offered to switch to keeping all if preferred.
+
+--------------------------------------------------------------------------------
+USER:
+Question: does this make sure the fallback only adds one POC?
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Answered:
+  - Script: YES — a hard code guarantee; the fallback branch returns a
+    single-element list (next(...) wrapped in [ ]), so exactly one INSERT.
+  - Cloud routine: instructed ("SELECT exactly ONE fallback contact"), but it's
+    an LLM prompt, so likely-but-not-structurally-guaranteed.
+Also flagged: "one" is per SOURCE ROW, not strictly per org (a duplicated org
+across rows gets one fallback each — existing per-row design); and the one-per
+limit applies only to the fallback (all preferred-role matches are still kept).
+
+--------------------------------------------------------------------------------
+USER:
+(Ran in-session) git add . ; git commit -m "specified avatar targeting and
+fallback random org poc listing" ; git push
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Confirmed the LF→CRLF warnings were harmless. Commit 898bea8 landed (4 files:
+enrich_leads.py, README.md, CLAUDE.md, and the newly-tracked
+insta_leads_enrichment_user_guide.html; the memory file lives outside the repo).
+Push updated main on GitHub (906ea1d..898bea8). Confirmed local repo, remote, and
+the live cloud routine were all in sync.
+
+--------------------------------------------------------------------------------
+USER:
+/imag_page_local
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Ran the imag_page_local skill. Read the skill's template.html, compiled the guide
+content from this session, and wrote a self-contained iMAG-themed page to
+C:\Users\Cloverly\claude_code\insta_leads_enrichment\instagram-leads-enrichment.html
+(distinct filename so it doesn't overwrite the existing user-guide HTML).
+Sections: What it does; Who it looks for (the seven preferred roles); Always at
+least one contact (prefer-then-fallback); How it runs (daily cloud routine
+~6:45 AM GMT+8 Mon–Fri + on-demand script/dry-run); Step by step; Things to keep
+in mind (domain-match caveat, 10-contact cap, duplicate orgs). Footer "Updated
+by: Julienne" / "Last Update: 22 September 2026". No images, no Drive upload, no
+routine fired. Left the divider/button href="#" and "Button label" as theme
+placeholders. File left untracked/uncommitted.
+
+--------------------------------------------------------------------------------
+USER:
+Document chat history in
+C:\Users\Cloverly\claude_code\insta_leads_enrichment\chat_history
+
+--------------------------------------------------------------------------------
+ASSISTANT:
+Matched the existing DDMMYY+HHMM filename convention and wrote this transcript to
+chat_history\2209261045_chat_history.txt (Hunter API key redacted).
+
+================================================================================
+END OF EXPORT
+================================================================================
